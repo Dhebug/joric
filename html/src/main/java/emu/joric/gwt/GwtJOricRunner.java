@@ -289,6 +289,7 @@ public class GwtJOricRunner extends JOricRunner {
                 .setHash(null)
                 .removeParameter("url")
                 .removeParameter("rom")
+                .removeParameter("crt")
                 .buildString();
         updateURLWithoutReloading(newURL);
     }

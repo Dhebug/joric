@@ -139,6 +139,10 @@ public class MachineInputProcessor extends InputAdapter {
             machineScreen.getJoricRunner().sendNmi();
             return true;
         }
+        else if (keycode == Keys.F8) {
+            machineScreen.nextCrtMode();
+            return true;
+        }
         else if (keycode == Keys.F11) {
             if (!Gdx.app.getType().equals(ApplicationType.WebGL)) {
                 Boolean fullScreen = Gdx.graphics.isFullscreen();
@@ -227,6 +231,7 @@ public class MachineInputProcessor extends InputAdapter {
             boolean screenSizeClicked = false;
             boolean pausePlayClicked = false;
             boolean nmiClicked = false;
+            boolean crtClicked = false;
 
             if (viewportManager.isPortrait()) {
                 // Portrait.
@@ -327,7 +332,7 @@ public class MachineInputProcessor extends InputAdapter {
                              if (touchXY.x > (viewportManager.getWidth() - 112)) {
                                  nmiClicked = true;
                              } else if (touchXY.x < 112) {
-                                 // Free slot.
+                                 crtClicked = true;
                              }
                          }
                     }
@@ -400,6 +405,10 @@ public class MachineInputProcessor extends InputAdapter {
             
             if (screenSizeClicked) {
                 rotateScreenSize();
+            }
+
+            if (crtClicked) {
+                machineScreen.nextCrtMode();
             }
             
             if (pausePlayClicked) {

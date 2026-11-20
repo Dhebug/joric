@@ -62,6 +62,12 @@ public class GwtLauncher extends GwtApplication {
             }
         }
         
+        // Optional CRT mode for a program launched from a link, e.g. ?url=...&crt=gentle
+        String crtParam = Window.Location.getParameter("crt");
+        if ((crtParam != null) && (!crtParam.trim().equals(""))) {
+            argsMap.put("crt", crtParam);
+        }
+
         GwtDialogHandler gwtDialogHandler = new GwtDialogHandler();
         JOricRunner joricRunner = new GwtJOricRunner(
                 new GwtKeyboardMatrix(), 

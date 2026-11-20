@@ -84,6 +84,15 @@ public class JOric extends Game {
                 adhocProgram.setRam("RAM_48K");
                 appConfigItem = adhocProgram;
             }
+
+            // The CRT mode for this launch, without changing the one saved in the preferences.
+            if (args.containsKey("crt")) {
+                try {
+                    machineScreen.setCrtMode(CrtShader.Mode.valueOf(args.get("crt").trim().toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    // Unknown mode: keep the saved one.
+                }
+            }
         }
         
         setScreen(homeScreen);

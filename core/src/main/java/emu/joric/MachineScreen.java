@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
@@ -80,6 +81,14 @@ public class MachineScreen implements Screen {
     private int updateScreen = 0;
     private int textureOffset = 0;
 
+    /**
+     * The CRT effect for the Oric screen, cycled with F8 and remembered in the preferences.
+     * The shader is null if it could not be compiled.
+     */
+    private ShaderProgram crtShader;
+    private CrtShader.Mode crtMode = CrtShader.Mode.OFF;
+    private static final String CRT_PREFERENCE = "crt_mode";
+
     // Screen resources for each MachineType.
     private Map<MachineType, Pixmap> machineTypePixmaps;
     private Map<MachineType, Camera> machineTypeCameras;
@@ -97,6 +106,7 @@ public class MachineScreen implements Screen {
     private Texture backIcon;
     private Texture fullScreenIcon;
     private Texture nmiIcon;
+    private Texture crtIcon;
 
     private ViewportManager viewportManager;
 
@@ -147,6 +157,13 @@ public class MachineScreen implements Screen {
 
         batch = new SpriteBatch();
 
+        crtShader = CrtShader.create();
+        try {
+            setCrtMode(CrtShader.Mode.valueOf(joric.getPreferences().getString(CRT_PREFERENCE, "OFF")));
+        } catch (IllegalArgumentException e) {
+            setCrtMode(CrtShader.Mode.OFF);
+        }
+
         machineTypePixmaps = new HashMap<MachineType, Pixmap>();
         machineTypeTextures = new HashMap<MachineType, Texture[]>();
         machineTypeViewports = new HashMap<MachineType, ExtendViewport>();
@@ -164,6 +181,7 @@ public class MachineScreen implements Screen {
         backIcon = new Texture("png/back_arrow.png");
         fullScreenIcon = new Texture("png/full_screen.png");
         nmiIcon = new Texture("png/nmi.png");
+        crtIcon = new Texture("png/crt_icon.png");
 
         // Create the portrait and landscape joystick touchpads.
         portraitTouchpad = createTouchpad(300);
@@ -361,17 +379,32 @@ public class MachineScreen implements Screen {
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.disableBlending();
+        Texture screen = screens[drawScreen + textureOffset];
+        boolean crt = (crtMode != CrtShader.Mode.OFF) && (crtShader != null);
+        if (crt) {
+            batch.setShader(crtShader);
+        }
         batch.begin();
+        if (crt) {
+            // Height of one Oric line in screen pixels, which decides how strong the scanlines can be.
+            float pixelsPerLine = ((float)viewport.getScreenHeight() / viewport.getWorldHeight()) *
+                    ((float)currentScreenSize.getRenderHeight() / ORIC_SCREEN_HEIGHT);
+            CrtShader.setUniforms(crtShader, crtMode, screen.getWidth(), screen.getHeight(),
+                    ORIC_SCREEN_WIDTH, ORIC_SCREEN_HEIGHT, pixelsPerLine);
+        }
         Color c = batch.getColor();
         batch.setColor(c.r, c.g, c.b, 1f);
-        
+
         // Texture isn't always drawn to match physical pixels.
         batch.draw(
-                screens[drawScreen + textureOffset], 
+                screen,
                 0, 0, currentScreenSize.getRenderWidth(), currentScreenSize.getRenderHeight(),
-                0, 0, ORIC_SCREEN_WIDTH, ORIC_SCREEN_HEIGHT, 
+                0, 0, ORIC_SCREEN_WIDTH, ORIC_SCREEN_HEIGHT,
                 false, false);
         batch.end();
+        if (crt) {
+            batch.setShader(null);
+        }
 
         // Render the UI elements, e.g. the keyboard and joystick icons.
         viewportManager.getCurrentCamera().update();
@@ -425,7 +458,7 @@ public class MachineScreen implements Screen {
                     // Normal landscape.
                     batch.draw(speakerIcon,   16, viewportManager.getHeight() - 112);
                     batch.draw(pausePlayIcon, 16, (viewportManager.getHeight() - (viewportManager.getHeight() / 3)) - 64);
-                    // Free slot.
+                    batch.draw(crtIcon,       16, (viewportManager.getHeight() / 3) - 32);
                     batch.draw(keyboardIcon,  16, 0);
                     batch.draw(fullScreenIcon, viewportManager.getWidth() - 112, viewportManager.getHeight() - 112);
                     batch.draw(screenSizeIcon, viewportManager.getWidth() - 112, (viewportManager.getHeight() - (viewportManager.getHeight() / 3)) - 64);
@@ -618,7 +651,11 @@ public class MachineScreen implements Screen {
         playIcon.dispose();
         pauseIcon.dispose();
         nmiIcon.dispose();
+        crtIcon.dispose();
         screenSizeIcon.dispose();
+        if (crtShader != null) {
+            crtShader.dispose();
+        }
         batch.dispose();
         joricRunner.stop();
         disposeScreens();
@@ -648,6 +685,33 @@ public class MachineScreen implements Screen {
      */
     public void changeBlur(boolean blurOn) {
         textureOffset = (blurOn? 3 : 0);
+        // Only the selected textures receive new frames, so give the newly selected ones the current frame
+        // straight away. Otherwise they stay empty (black) for as long as nothing new is drawn, e.g. while paused.
+        if (screens != null) {
+            for (int i = 0; i < 3; i++) {
+                screens[i + textureOffset].draw(screenPixmap, 0, 0);
+            }
+        }
+    }
+
+    /**
+     * Sets the CRT mode. The effect uses the blurred (linear filtered) textures, which
+     * give the soft horizontal blending of a real tube.
+     *
+     * @param crtMode
+     */
+    public void setCrtMode(CrtShader.Mode crtMode) {
+        this.crtMode = crtMode;
+        changeBlur(crtMode != CrtShader.Mode.OFF);
+    }
+
+    /**
+     * Switches to the next CRT mode, and remembers the choice for next time.
+     */
+    public void nextCrtMode() {
+        setCrtMode(crtMode.next());
+        joric.getPreferences().putString(CRT_PREFERENCE, crtMode.name());
+        joric.getPreferences().flush();
     }
 
     /**
