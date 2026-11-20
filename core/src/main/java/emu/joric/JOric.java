@@ -114,6 +114,8 @@ public class JOric extends Game {
             (programUrl.startsWith("https://127.0.0.1/")) || 
             (programUrl.startsWith("https://127.0.0.1:"))) {
             return programUrl;
+        } else if ((args != null) && args.containsKey("programsBase")) {
+            return (args.get("programsBase") + programUrl);
         } else {
             return ("https://oric.games/programs?url=" + programUrl);
         }

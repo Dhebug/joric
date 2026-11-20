@@ -62,6 +62,10 @@ public class GwtLauncher extends GwtApplication {
             }
         }
         
+        // Programs from other sites are fetched through the /programs proxy of the site that
+        // serves JOric (https://oric.games/programs?url= when served from oric.games).
+        argsMap.put("programsBase", Window.Location.getProtocol() + "//" + Window.Location.getHost() + "/programs?url=");
+
         GwtDialogHandler gwtDialogHandler = new GwtDialogHandler();
         JOricRunner joricRunner = new GwtJOricRunner(
                 new GwtKeyboardMatrix(), 
