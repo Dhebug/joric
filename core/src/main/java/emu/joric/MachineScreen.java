@@ -118,6 +118,13 @@ public class MachineScreen implements Screen {
     private boolean startedByUser;
 
     /**
+     * Whether the app itself is paused (e.g. browser tab hidden), and whether the Oric was
+     * already paused by the user at that moment.
+     */
+    private boolean appPaused;
+    private boolean pausedBeforeAppPause;
+
+    /**
      * PAL or NTSC. Currently we only support PAL, as NTSC is super rare for Oric.
      * They were never sold in NTSC countries, so there are unlikely to be NTSC
      * specific dependencies in the available programs.
@@ -573,14 +580,24 @@ public class MachineScreen implements Screen {
 
     @Override
     public void pause() {
-        // On Android, this is also called when the "Home" button is pressed.
+        // On Android, this is also called when the "Home" button is pressed. In the browser,
+        // when the tab is hidden. Remember whether the user had already paused the Oric, so
+        // that resume does not unpause it.
+        if (!appPaused) {
+            appPaused = true;
+            pausedBeforeAppPause = joricRunner.isPaused();
+        }
         joricRunner.pause();
     }
 
     @Override
     public void resume() {
         KeyboardType.init();
-        joricRunner.resume();
+        boolean stayPaused = appPaused && pausedBeforeAppPause;
+        appPaused = false;
+        if (!stayPaused) {
+            joricRunner.resume();
+        }
     }
 
     @Override
