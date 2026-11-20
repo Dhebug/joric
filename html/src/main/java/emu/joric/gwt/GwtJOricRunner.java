@@ -36,7 +36,12 @@ public class GwtJOricRunner extends JOricRunner {
      * running a game but the game has now stopped, e.g. due to the user quitting the game.
      */
     private boolean stopped;
-    
+
+    /**
+     * Set by ?sound=on: the sound is switched on at the user's first key press or click.
+     */
+    private boolean soundOnFirstInteraction;
+
     /**
      * Constructor for GwtJOricRunner.
      * 
@@ -289,6 +294,7 @@ public class GwtJOricRunner extends JOricRunner {
                 .setHash(null)
                 .removeParameter("url")
                 .removeParameter("rom")
+                .removeParameter("sound")
                 .buildString();
         updateURLWithoutReloading(newURL);
     }
@@ -424,6 +430,36 @@ public class GwtJOricRunner extends JOricRunner {
         }
     }
     
+    @Override
+    public void soundOnFirstInteraction() {
+        soundOnFirstInteraction = true;
+        registerUserInteractionHandler();
+    }
+
+    /**
+     * Listens to key presses and clicks anywhere on the page, before anything else handles
+     * them, as browsers only allow sound to start inside such a user interaction.
+     */
+    private native void registerUserInteractionHandler() /*-{
+        var that = this;
+        var handler = $entry(function(e) {
+            that.@emu.joric.gwt.GwtJOricRunner::onUserInteraction()();
+        });
+        $wnd.document.addEventListener('keydown', handler, true);
+        $wnd.document.addEventListener('pointerdown', handler, true);
+    }-*/;
+
+    private void onUserInteraction() {
+        if (soundOnFirstInteraction && (worker != null) && !stopped) {
+            if ((getMachineInputProcessor() != null) && getMachineInputProcessor().isSpeakerOn()) {
+                // The sound is on (and from now on, the speaker icon is the user's choice).
+                soundOnFirstInteraction = false;
+            } else {
+                psg.resumeSound();
+            }
+        }
+    }
+
     @Override
     public void sendNmi() {
         worker.postObject("SendNMI", JavaScriptObject.createObject());

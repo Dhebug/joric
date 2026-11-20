@@ -84,6 +84,10 @@ public class JOric extends Game {
                 adhocProgram.setRam("RAM_48K");
                 appConfigItem = adhocProgram;
             }
+
+            if ("on".equalsIgnoreCase(args.get("sound"))) {
+                joricRunner.soundOnFirstInteraction();
+            }
         }
         
         setScreen(homeScreen);

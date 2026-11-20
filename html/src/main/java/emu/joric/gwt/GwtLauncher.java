@@ -62,6 +62,12 @@ public class GwtLauncher extends GwtApplication {
             }
         }
         
+        // Optional for a program launched from a link, e.g. ?url=...&sound=on
+        String soundParam = Window.Location.getParameter("sound");
+        if ((soundParam != null) && (!soundParam.trim().equals(""))) {
+            argsMap.put("sound", soundParam);
+        }
+
         GwtDialogHandler gwtDialogHandler = new GwtDialogHandler();
         JOricRunner joricRunner = new GwtJOricRunner(
                 new GwtKeyboardMatrix(), 

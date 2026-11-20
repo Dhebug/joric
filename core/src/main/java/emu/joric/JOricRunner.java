@@ -196,6 +196,15 @@ public abstract class JOricRunner {
     public boolean isSoundOn() {
         return psg.isSoundOn();
     }
+
+    /**
+     * Asks for the sound to be switched on at the user's first key press or click. Browsers
+     * only let a page start sound inside a user interaction, so a program launched straight
+     * from a link starts muted. Does nothing by default: other platforms can play sound
+     * straight away.
+     */
+    public void soundOnFirstInteraction() {
+    }
     
     public MachineScreen getMachineScreen() {
         return machineScreen;
